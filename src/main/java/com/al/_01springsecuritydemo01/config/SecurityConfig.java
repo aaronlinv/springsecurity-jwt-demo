@@ -2,15 +2,20 @@ package com.al._01springsecuritydemo01.config;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
+import org.springframework.http.HttpMethod;
+import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.authentication.AuthenticationFailureHandler;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
+import com.al._01springsecuritydemo01.config.jwt.JwtAuthTokenFilter;
 import com.al._01springsecuritydemo01.service.UserDetailService;
 
 @EnableWebSecurity
@@ -24,6 +29,9 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
     @Autowired
     private UserDetailService userDetailService;
+    
+    @Autowired
+    private JwtAuthTokenFilter jwtAuthTokenFilter;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -31,14 +39,30 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     }
 
     @Override
+    @Bean
+    public AuthenticationManager authenticationManagerBean() throws Exception {
+        return super.authenticationManagerBean();
+    }
+
+    @Override
     protected void configure(HttpSecurity http) throws Exception {
-        http.formLogin()
-                .loginPage("/login.html")
-                .loginProcessingUrl("/login")
-                // .defaultSuccessUrl("/index")
-                // .defaultSuccessUrl("/index")
-                .successHandler(successHandler)
-                .failureHandler(failureHandler)
+        // http.formLogin()
+        //         .loginPage("/login.html")
+        //         .loginProcessingUrl("/login")
+        //         // .defaultSuccessUrl("/index")
+        //         // .defaultSuccessUrl("/index")
+        //         .successHandler(successHandler)
+        //         .failureHandler(failureHandler)
+        http.sessionManagement()
+                .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                .and()
+
+                .authorizeRequests()
+                .antMatchers("/login")
+                .anonymous()
+
+                .antMatchers(HttpMethod.GET, "/*.html", "/**/*.html", "/**/*.css", "/**/*.js")
+                .permitAll()
 
                 .and()
                 .authorizeRequests()
@@ -58,6 +82,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 .and()
                 .csrf().disable();
         http.logout().logoutUrl("/logout");
+        http.addFilterBefore(jwtAuthTokenFilter, UsernamePasswordAuthenticationFilter.class);
     }
 
     @Override
